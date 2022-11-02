@@ -1,0 +1,9 @@
+{
+    "name": "volume-rendering",
+    "version": "1.0",
+    "dependencies": [
+        "sfml",
+        "imgui",
+        "imgui-sfml"
+    ]
+}
