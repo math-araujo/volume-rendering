@@ -7,7 +7,6 @@
 #include <imgui.h>
 
 #include <SFML/Graphics/Image.hpp>
-#include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 #include <SFML/Graphics/Texture.hpp>
@@ -20,17 +19,15 @@ sf::Color vector_to_color(const sf::Vector3f& vector)
                      static_cast<std::uint8_t>(vector.z * 255.0f)};
 }
 
-sf::Vector3f beer_lambert_transmittance(float distance, float absorption_coeff, const sf::Vector3f& background)
+float beer_lambert_transmittance(float distance, float absorption_coeff)
 {
-    const float transmittance{std::exp(-distance * absorption_coeff)};
-    return transmittance * background;
+    return std::exp(-distance * absorption_coeff);
 }
 
-sf::Vector3f beer_lambert_transmittance(float distance, float absorption_coeff, const sf::Vector3f& background,
-                                        float& transmittance)
+sf::Vector3f volume_scattering(float transmittance, const sf::Vector3f& background,
+                               const sf::Vector3f& volume = sf::Vector3f{0.0f, 0.0f, 0.0f})
 {
-    transmittance = std::exp(-distance * absorption_coeff);
-    return transmittance * background;
+    return (transmittance * background) + (1.0f - transmittance) * volume;
 }
 
 class ImageData
@@ -84,6 +81,7 @@ int main()
 {
     const sf::Vector2u image_size{800, 600};
     const sf::Vector3f background{0.0f, 1.0f, 1.0f};
+    const sf::Vector3f volume{0.0f, 0.0f, 0.0f};
     ImageData image_data{image_size};
     sf::RenderWindow window{sf::VideoMode{image_size.x, image_size.y}, "Volume Renderer"};
 
@@ -97,9 +95,9 @@ int main()
 
     float distance{10.0f};
     float absorption_coeff{0.0f};
-    float transmittance{0.0f};
+    float transmittance{beer_lambert_transmittance(distance, absorption_coeff)};
     bool update{false};
-    image_data.set_color(beer_lambert_transmittance(distance, absorption_coeff, background, transmittance));
+    image_data.set_color(volume_scattering(transmittance, background, volume));
 
     while (window.isOpen())
     {
@@ -115,11 +113,12 @@ int main()
 
         ImGui::SFML::Update(window, delta_clock.restart());
         ImGui::Begin("Hello, world!");
-        update = ImGui::SliderFloat("Distance", &distance, 0.0f, 20.0f);
-        update |= ImGui::SliderFloat("Absorption Coefficient", &absorption_coeff, 0.0f, 1.0f);
+        update = ImGui::SliderFloat("Distance", &distance, 0.0f, 10.0f);
+        update = ImGui::SliderFloat("Absorption Coefficient", &absorption_coeff, 0.0f, 1.0f) || update;
         if (update)
         {
-            image_data.set_color(beer_lambert_transmittance(distance, absorption_coeff, background, transmittance));
+            transmittance = beer_lambert_transmittance(distance, absorption_coeff);
+            image_data.set_color(volume_scattering(transmittance, background, volume));
             update = false;
         }
         ImGui::Text("Transmittance: %.4f", transmittance);
