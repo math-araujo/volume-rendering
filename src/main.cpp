@@ -15,88 +15,15 @@
 #include <SFML/System/Clock.hpp>
 #include <SFML/Window/Event.hpp>
 
+#include "primitives.hpp"
+#include "ray.hpp"
+#include "scene_tracer.hpp"
+
 sf::Color vector_to_color(const sf::Vector3f& vector)
 {
     return sf::Color{static_cast<std::uint8_t>(vector.x * 255.0f), static_cast<std::uint8_t>(vector.y * 255.0f),
                      static_cast<std::uint8_t>(vector.z * 255.0f)};
 }
-
-float beer_lambert_transmittance(float distance, float absorption_coeff)
-{
-    return std::exp(-distance * absorption_coeff);
-}
-
-sf::Vector3f volume_scattering(float transmittance, const sf::Vector3f& background,
-                               const sf::Vector3f& volume = sf::Vector3f{0.0f, 0.0f, 0.0f})
-{
-    return (transmittance * background) + (1.0f - transmittance) * volume;
-}
-
-struct Ray
-{
-    glm::vec3 origin{};
-    glm::vec3 direction{};
-
-    glm::vec3 evaluate(float parameter) const
-    {
-        return origin + (parameter * direction);
-    }
-};
-
-struct Sphere
-{
-    float absorption_coeff{0.1f};
-    float radius{1.0f};
-    glm::vec3 center{0.0f, 0.0f, -4.0f};
-    sf::Vector3f color{1.0f, 0.0f, 1.0f};
-
-    bool intersect(const Ray& ray, float& t0, float& t1) const
-    {
-        const float quadratic_coeff{glm::dot(ray.direction, ray.direction)};
-        const glm::vec3 center_to_origin{ray.origin - center};
-        const float linear_coeff{2.0f * glm::dot(ray.direction, center_to_origin)};
-        const float independent_coeff{glm::dot(center_to_origin, center_to_origin) - radius * radius};
-
-        const float discriminant{linear_coeff * linear_coeff - 4 * quadratic_coeff * independent_coeff};
-        if (discriminant < 0.0f)
-        {
-            return false;
-        }
-
-        t0 = (-linear_coeff - discriminant) / (2.0f * quadratic_coeff);
-        t1 = (-linear_coeff + discriminant) / (2.0f * quadratic_coeff);
-        return true;
-    }
-};
-
-struct SceneTracer
-{
-    virtual ~SceneTracer() = default;
-    virtual sf::Vector3f operator()(const Ray& ray, const Sphere& sphere) const = 0;
-};
-
-// Chapter 1 - Ray Casting with Beer-Lambert Law
-struct VolumeRayCasting : public SceneTracer
-{
-    ~VolumeRayCasting() override = default;
-
-    sf::Vector3f operator()(const Ray& ray, const Sphere& sphere) const override
-    {
-        float t0{0.0f};
-        float t1{0.0f};
-        const sf::Vector3f background{0.0f, 1.0f, 1.0f};
-        if (sphere.intersect(ray, t0, t1))
-        {
-            const glm::vec3 first_hit{ray.evaluate(t0)};
-            const glm::vec3 second_hit{ray.evaluate(t1)};
-            const float distance{glm::length(second_hit - first_hit)};
-            const float transmittance{beer_lambert_transmittance(distance, sphere.absorption_coeff)};
-            return volume_scattering(transmittance, background, sphere.color);
-        }
-
-        return background;
-    }
-};
 
 class ImageData
 {
@@ -110,7 +37,8 @@ public:
         sprite_.setTexture(texture_, true);
     }
 
-    void render_image(const glm::vec3& ray_origin, const Sphere& sphere, const SceneTracer& trace_scene)
+    void render_image(const glm::vec3& ray_origin, const primitives::Sphere& sphere,
+                      const scene::SceneTracer& trace_scene)
     {
         for (std::uint32_t y = 0; y < image_size_.y; ++y)
         {
@@ -120,7 +48,8 @@ public:
                     ((2.0f * ((x + 0.5f) / image_size_.x)) - 1.0f) * aspect_ratio_ * tan_fvov_,
                     (-1 * ((2.0f * ((y + 0.5f) / image_size_.y)) - 1.0f)) * tan_fvov_, -1.0f};
 
-                Ray ray{.origin = ray_origin, .direction = glm::normalize(pixel_screen_coordinates - ray_origin)};
+                geometry::Ray ray{.origin = ray_origin,
+                                  .direction = glm::normalize(pixel_screen_coordinates - ray_origin)};
                 image_.setPixel(x, y, vector_to_color(trace_scene(ray, sphere)));
             }
         }
@@ -184,8 +113,8 @@ int main()
     }
 
     bool update{false};
-    Sphere sphere{};
-    std::unique_ptr<SceneTracer> tracer{std::make_unique<VolumeRayCasting>()};
+    primitives::Sphere sphere{};
+    std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeRayCasting>()};
     image_data.render_image(glm::vec3{0.0f, 0.0f, 0.0f}, sphere, *tracer);
 
     while (window.isOpen())

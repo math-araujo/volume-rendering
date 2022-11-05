@@ -4,12 +4,14 @@ cmake_minimum_required(VERSION 3.20)
 include(cmake/fetchvcpkg.cmake)
 project(volume-rendering LANGUAGES CXX)
 
-find_package(SFML COMPONENTS system window graphics CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(ImGui-SFML CONFIG REQUIRED)
+find_package(SFML COMPONENTS system window graphics CONFIG REQUIRED)
 
-add_executable(main src/main.cpp)
-target_link_libraries(main PRIVATE sfml-system sfml-graphics sfml-window imgui::imgui ImGui-SFML::ImGui-SFML)
+add_subdirectory(src)
+add_executable(main ${SOURCES})
+target_link_libraries(main PRIVATE glm::glm sfml-system sfml-graphics sfml-window imgui::imgui ImGui-SFML::ImGui-SFML)
 target_compile_features(main PRIVATE cxx_std_20)
 set_target_properties(main PROPERTIES CXX_EXTENSIONS OFF)
 
