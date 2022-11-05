@@ -1,6 +1,7 @@
 #include <array>
 #include <cmath>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 
 #include <glm/glm.hpp>
@@ -68,22 +69,34 @@ struct Sphere
     }
 };
 
-sf::Vector3f trace_scene(const Ray& ray, const Sphere& sphere)
+struct SceneTracer
 {
-    float t0{0.0f};
-    float t1{0.0f};
-    const sf::Vector3f background{0.0f, 1.0f, 1.0f};
-    if (sphere.intersect(ray, t0, t1))
-    {
-        const glm::vec3 first_hit{ray.evaluate(t0)};
-        const glm::vec3 second_hit{ray.evaluate(t1)};
-        const float distance{glm::length(second_hit - first_hit)};
-        const float transmittance{beer_lambert_transmittance(distance, sphere.absorption_coeff)};
-        return volume_scattering(transmittance, background, sphere.color);
-    }
+    virtual ~SceneTracer() = default;
+    virtual sf::Vector3f operator()(const Ray& ray, const Sphere& sphere) const = 0;
+};
 
-    return background;
-}
+// Chapter 1 - Ray Casting with Beer-Lambert Law
+struct VolumeRayCasting : public SceneTracer
+{
+    ~VolumeRayCasting() override = default;
+
+    sf::Vector3f operator()(const Ray& ray, const Sphere& sphere) const override
+    {
+        float t0{0.0f};
+        float t1{0.0f};
+        const sf::Vector3f background{0.0f, 1.0f, 1.0f};
+        if (sphere.intersect(ray, t0, t1))
+        {
+            const glm::vec3 first_hit{ray.evaluate(t0)};
+            const glm::vec3 second_hit{ray.evaluate(t1)};
+            const float distance{glm::length(second_hit - first_hit)};
+            const float transmittance{beer_lambert_transmittance(distance, sphere.absorption_coeff)};
+            return volume_scattering(transmittance, background, sphere.color);
+        }
+
+        return background;
+    }
+};
 
 class ImageData
 {
@@ -97,7 +110,7 @@ public:
         sprite_.setTexture(texture_, true);
     }
 
-    void render_image(const glm::vec3& ray_origin, const Sphere& sphere)
+    void render_image(const glm::vec3& ray_origin, const Sphere& sphere, const SceneTracer& trace_scene)
     {
         for (std::uint32_t y = 0; y < image_size_.y; ++y)
         {
@@ -172,7 +185,8 @@ int main()
 
     bool update{false};
     Sphere sphere{};
-    image_data.render_image(glm::vec3{0.0f, 0.0f, 0.0f}, sphere);
+    std::unique_ptr<SceneTracer> tracer{std::make_unique<VolumeRayCasting>()};
+    image_data.render_image(glm::vec3{0.0f, 0.0f, 0.0f}, sphere, *tracer);
 
     while (window.isOpen())
     {
@@ -195,7 +209,7 @@ int main()
             update = ImGui::SliderFloat("Absorption Coefficient", &sphere.absorption_coeff, 0.0f, 1.0f);
             if (update)
             {
-                image_data.render_image(glm::vec3{0.0f, 0.0f, 0.0f}, sphere);
+                image_data.render_image(glm::vec3{0.0f, 0.0f, 0.0f}, sphere, *tracer);
                 update = false;
             }
             ImGui::TreePop();
