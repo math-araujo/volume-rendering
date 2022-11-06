@@ -25,8 +25,8 @@ struct HitRecord
 struct Sphere
 {
     float absorption_coeff{0.1f};
-    float radius{1.0f};
-    glm::vec3 center{0.0f, 0.0f, -4.0f};
+    float radius{5.0f};
+    glm::vec3 center{0.0f, 0.0f, -20.0f};
     sf::Vector3f color{1.0f, 0.0f, 1.0f};
 
     bool intersect(const geometry::Ray& ray, HitRecord& record) const;

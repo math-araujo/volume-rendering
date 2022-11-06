@@ -1,6 +1,10 @@
-#include "scene_tracer.hpp"
+#include <cmath>
+#include <iostream>
+#include <stdexcept>
+
 #include "primitives.hpp"
 #include "ray.hpp"
+#include "scene_tracer.hpp"
 #include "volume.hpp"
 
 namespace scene
@@ -25,13 +29,44 @@ sf::Vector3f VolumeAbsorption::operator()(const geometry::Ray& ray, const primit
 sf::Vector3f VolumeInScattering::operator()(const geometry::Ray& ray, const primitives::Sphere& sphere) const
 {
     primitives::HitRecord record{};
-    const sf::Vector3f background{0.0f, 1.0f, 1.0f};
-    if (sphere.intersect(ray, record))
+    const sf::Vector3f background{0.572f, 0.772f, 0.921f};
+    if (!sphere.intersect(ray, record))
     {
-        return sf::Vector3f{1.0f, 0.0f, 0.0f};
+        return background;
     }
 
-    return background;
+    float step_size{0.2f};
+    int number_of_steps{static_cast<int>(std::ceil((record.max_root - record.min_root) / step_size))};
+    step_size = (record.max_root - record.min_root) / number_of_steps;
+
+    float transparency{1.0f};
+    glm::vec3 final_color{0.0f, 0.0f, 0.0f};
+    // For uniform ray-marching, the sample attenuation is assumed to be constant
+    const float attenuation{volume::beer_lambert_transmittance(step_size, sphere.absorption_coeff)};
+    for (int step = 0; step < number_of_steps; ++step)
+    {
+        float current_step_parameter{record.min_root + (step_size * (step + 0.5f))};
+        const glm::vec3 sample_position{ray.evaluate(current_step_parameter)};
+        transparency *= attenuation;
+        const geometry::Ray in_scattering_ray{.origin = sample_position, .direction = light_direction};
+        primitives::HitRecord volume_hit{.inside = false};
+
+        // If the in-scattering ray is inside the volume, it will intersect the sphere
+        // in the position where the ray entered the volume
+        if (sphere.intersect(in_scattering_ray, volume_hit) && volume_hit.inside)
+        {
+            const float light_attenuation{
+                volume::beer_lambert_transmittance(volume_hit.max_root, sphere.absorption_coeff)};
+            // Integration (Riemman Sum) of the samples
+            final_color += (transparency * light_attenuation * sphere.absorption_coeff * step_size) * light_color;
+        }
+        else
+        {
+            throw std::runtime_error("In-scattering ray didn't intersect sphere");
+        }
+    }
+
+    return (background * transparency) + sf::Vector3f{final_color.x, final_color.y, final_color.z};
 }
 
 } // namespace scene

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <iostream>
@@ -19,8 +20,11 @@
 #include "ray.hpp"
 #include "scene_tracer.hpp"
 
-sf::Color vector_to_color(const sf::Vector3f& vector)
+sf::Color vector_to_color(sf::Vector3f vector)
 {
+    vector.x = std::min(vector.x, 1.0f);
+    vector.y = std::min(vector.y, 1.0f);
+    vector.z = std::min(vector.z, 1.0f);
     return sf::Color{static_cast<std::uint8_t>(vector.x * 255.0f), static_cast<std::uint8_t>(vector.y * 255.0f),
                      static_cast<std::uint8_t>(vector.z * 255.0f)};
 }
@@ -28,7 +32,7 @@ sf::Color vector_to_color(const sf::Vector3f& vector)
 class ImageData
 {
 public:
-    ImageData(const sf::Vector2u& dimensions, float vertical_fov = 90.0f) :
+    ImageData(const sf::Vector2u& dimensions, float vertical_fov = 45.0f) :
         image_size_{dimensions}, aspect_ratio_{static_cast<float>(image_size_.x) / static_cast<float>(image_size_.y)},
         vertical_fov_{vertical_fov}, tan_fvov_{std::tan(glm::radians(vertical_fov_ / 2.0f))}
     {
@@ -55,6 +59,7 @@ public:
         }
 
         load_image();
+        image_.saveToFile("volume.png");
     }
 
     void set_color(const sf::Color& color)
@@ -99,7 +104,7 @@ private:
 
 int main()
 {
-    const sf::Vector2u image_size{800, 600};
+    const sf::Vector2u image_size{640, 480};
     const sf::Vector3f background{0.0f, 1.0f, 1.0f};
     ImageData image_data{image_size};
     sf::RenderWindow window{sf::VideoMode{image_size.x, image_size.y}, "Volume Renderer"};
@@ -114,7 +119,7 @@ int main()
 
     bool update{false};
     primitives::Sphere sphere{};
-    std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeAbsorption>()};
+    std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeInScattering>()};
     image_data.render_image(glm::vec3{0.0f, 0.0f, 0.0f}, sphere, *tracer);
 
     while (window.isOpen())

@@ -46,7 +46,6 @@ struct SceneTracer
 struct VolumeAbsorption : public SceneTracer
 {
     ~VolumeAbsorption() override = default;
-
     sf::Vector3f operator()(const geometry::Ray& ray, const primitives::Sphere& sphere) const override;
 };
 
@@ -54,8 +53,10 @@ struct VolumeAbsorption : public SceneTracer
 struct VolumeInScattering : public SceneTracer
 {
     ~VolumeInScattering() override = default;
-
     sf::Vector3f operator()(const geometry::Ray& ray, const primitives::Sphere& sphere) const override;
+
+    glm::vec3 light_direction{0.0f, 1.0f, 0.0f};
+    glm::vec3 light_color{1.3f, 0.3f, 0.9f};
 };
 
 } // namespace scene

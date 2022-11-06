@@ -1,5 +1,6 @@
-#include "primitives.hpp"
+#include <algorithm>
 
+#include "primitives.hpp"
 #include "ray.hpp"
 
 namespace primitives
@@ -18,10 +19,8 @@ bool Sphere::intersect(const geometry::Ray& ray, HitRecord& record) const
         return false;
     }
 
-    /*record.min_root = (-linear_coeff - discriminant) / (2.0f * quadratic_coeff);
-    record.max_root = (-linear_coeff + discriminant) / (2.0f * quadratic_coeff);*/
-    float t0{(-linear_coeff - discriminant) / (2.0f * quadratic_coeff)};
-    const float t1{(-linear_coeff + discriminant) / (2.0f * quadratic_coeff)};
+    float t0{(-linear_coeff - std::sqrt(discriminant)) / (2.0f * quadratic_coeff)};
+    const float t1{(-linear_coeff + std::sqrt(discriminant)) / (2.0f * quadratic_coeff)};
     if (t0 < 0.0f)
     {
         if (t1 < 0.0f)
@@ -35,10 +34,8 @@ bool Sphere::intersect(const geometry::Ray& ray, HitRecord& record) const
         }
     }
 
-    record.min_root = t0;
-    record.max_root = t1;
-
-    return true;
+    record.min_root = std::min(t0, t1);
+    record.max_root = std::max(t0, t1);
 
     return true;
 }
