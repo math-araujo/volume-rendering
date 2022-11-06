@@ -5,7 +5,7 @@
 namespace primitives
 {
 
-bool Sphere::intersect(const geometry::Ray& ray, float& t0, float& t1) const
+bool Sphere::intersect(const geometry::Ray& ray, HitRecord& record) const
 {
     const float quadratic_coeff{glm::dot(ray.direction, ray.direction)};
     const glm::vec3 center_to_origin{ray.origin - center};
@@ -18,8 +18,28 @@ bool Sphere::intersect(const geometry::Ray& ray, float& t0, float& t1) const
         return false;
     }
 
-    t0 = (-linear_coeff - discriminant) / (2.0f * quadratic_coeff);
-    t1 = (-linear_coeff + discriminant) / (2.0f * quadratic_coeff);
+    /*record.min_root = (-linear_coeff - discriminant) / (2.0f * quadratic_coeff);
+    record.max_root = (-linear_coeff + discriminant) / (2.0f * quadratic_coeff);*/
+    float t0{(-linear_coeff - discriminant) / (2.0f * quadratic_coeff)};
+    const float t1{(-linear_coeff + discriminant) / (2.0f * quadratic_coeff)};
+    if (t0 < 0.0f)
+    {
+        if (t1 < 0.0f)
+        {
+            return false; // Sphere is completely behind the origin
+        }
+        else // Origin is inside the sphere
+        {
+            t0 = 0.0f;
+            record.inside = true;
+        }
+    }
+
+    record.min_root = t0;
+    record.max_root = t1;
+
+    return true;
+
     return true;
 }
 

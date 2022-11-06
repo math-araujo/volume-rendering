@@ -22,16 +22,38 @@ class Sphere;
 namespace scene
 {
 
+enum class Chapters
+{
+    VolumeAbsorption = 0,
+    VolumeInScatteringBackward = 1,
+    NumberOfChapters = 2,
+};
+
+/*
+
+Functors implementing the topic of each chapter,
+one functor per chapter.
+
+*/
+
 struct SceneTracer
 {
     virtual ~SceneTracer() = default;
     virtual sf::Vector3f operator()(const geometry::Ray& ray, const primitives::Sphere& sphere) const = 0;
 };
 
-// Chapter 1 - Ray Casting with Beer-Lambert Law
-struct VolumeRayCasting : public SceneTracer
+// Chapter 1 - Ray Casting with Beer-Lambert Law, implementing Indirect Light Absorption
+struct VolumeAbsorption : public SceneTracer
 {
-    ~VolumeRayCasting() override = default;
+    ~VolumeAbsorption() override = default;
+
+    sf::Vector3f operator()(const geometry::Ray& ray, const primitives::Sphere& sphere) const override;
+};
+
+// Chapter 2 - Ray Marching Algorithm, adding the contributions of Light In-Scattering
+struct VolumeInScattering : public SceneTracer
+{
+    ~VolumeInScattering() override = default;
 
     sf::Vector3f operator()(const geometry::Ray& ray, const primitives::Sphere& sphere) const override;
 };

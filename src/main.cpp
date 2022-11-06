@@ -114,7 +114,7 @@ int main()
 
     bool update{false};
     primitives::Sphere sphere{};
-    std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeRayCasting>()};
+    std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeAbsorption>()};
     image_data.render_image(glm::vec3{0.0f, 0.0f, 0.0f}, sphere, *tracer);
 
     while (window.isOpen())
