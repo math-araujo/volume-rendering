@@ -36,7 +36,7 @@ sf::Vector3f VolumeInScattering::operator()(const geometry::Ray& ray, const prim
     }
 
     float step_size{0.2f};
-    int number_of_steps{static_cast<int>(std::ceil((record.max_root - record.min_root) / step_size))};
+    const int number_of_steps{static_cast<int>(std::ceil((record.max_root - record.min_root) / step_size))};
     step_size = (record.max_root - record.min_root) / number_of_steps;
 
     float transparency{1.0f};
@@ -57,8 +57,18 @@ sf::Vector3f VolumeInScattering::operator()(const geometry::Ray& ray, const prim
         {
             const float light_attenuation{
                 volume::beer_lambert_transmittance(volume_hit.max_root, sphere.absorption_coeff)};
-            // Integration (Riemman Sum) of the samples
-            final_color += (transparency * light_attenuation * sphere.absorption_coeff * step_size) * light_color;
+            const glm::vec3 in_scattering_contribution{light_attenuation * light_color}; // L_i(x)
+
+            // Integration (Riemman Sum) of the sample
+            final_color += (transparency * step_size * sphere.absorption_coeff) * in_scattering_contribution;
+            /*
+            NOTE: sphere.absorption_coeff on the equation/code above actually should be sphere.scattering_coefficient
+            which wasn't presented on Chapter 2. Without the scattering term, a white sphere appears.
+            I modified the original author's code and remove the scattering term, and it also resulted on a
+            white sphere.
+            I used sphere.absorption_coeff for simplicity (since the default values of absorption and scattering are
+            equal) and to get a decent output, but the true term should be scattering, not absorption.
+            */
         }
         else
         {
