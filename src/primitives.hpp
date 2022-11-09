@@ -24,7 +24,9 @@ struct HitRecord
 
 struct Sphere
 {
-    float absorption_coeff{0.1f};
+    float absorption_coeff{0.5f};
+    float scattering_coeff{0.5f};
+    float density{0.25f};
     float radius{5.0f};
     glm::vec3 center{0.0f, 0.0f, -20.0f};
     sf::Vector3f color{1.0f, 0.0f, 1.0f};

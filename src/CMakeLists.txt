@@ -4,6 +4,8 @@ set(FILENAMES
     primitives.hpp primitives.cpp
     ray.hpp ray.cpp
     volume.hpp volume.cpp
+    phase.hpp phase.cpp
+    random_gen.hpp random_gen.cpp
 )
 
 set(DIR_FILENAMES "")

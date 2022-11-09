@@ -1,8 +1,11 @@
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
 
+#include "phase.hpp"
 #include "primitives.hpp"
+#include "random_gen.hpp"
 #include "ray.hpp"
 #include "scene_tracer.hpp"
 #include "volume.hpp"
@@ -73,6 +76,67 @@ sf::Vector3f VolumeInScattering::operator()(const geometry::Ray& ray, const prim
         else
         {
             throw std::runtime_error("In-scattering ray didn't intersect sphere");
+        }
+    }
+
+    return (background * transparency) + sf::Vector3f{final_color.x, final_color.y, final_color.z};
+}
+
+sf::Vector3f VolumeComplete::operator()(const geometry::Ray& ray, const primitives::Sphere& sphere) const
+{
+    primitives::HitRecord record;
+    const sf::Vector3f background{0.572f, 0.772f, 0.921f};
+    if (!sphere.intersect(ray, record))
+    {
+        return background;
+    }
+
+    float step_size{0.1f};
+    const int number_of_steps{static_cast<int>(std::ceil((record.max_root - record.min_root) / step_size))};
+    step_size = (record.max_root - record.min_root) / number_of_steps;
+
+    glm::vec3 final_color{0.0f, 0.0f, 0.0f};
+    float transparency{1.0f};
+    const float attenuation{volume::beer_lambert_transmittance(
+        step_size, sphere.density * (sphere.absorption_coeff + sphere.scattering_coeff))};
+    for (int step = 0; step < number_of_steps; ++step)
+    {
+        // NOTE: when step = 0 and random_float returns a float close to zero,
+        // the in-scattering ray doesn't intersect the sphere; the same hapens
+        // when step = number_of_steps - 1 and random float returns a value is close to 1.
+        float jitter{randomgen::random_float(0.01f, 0.95f)};
+        const float parameter{record.min_root + step_size * (step + jitter)};
+        // const float parameter{record.min_root + step_size * (step + 0.5f)};
+        const glm::vec3 sample_position{ray.evaluate(parameter)};
+        transparency *= attenuation;
+
+        const geometry::Ray in_scattering_ray{.origin = sample_position, .direction = light_direction};
+        primitives::HitRecord volume_hit;
+        if (sphere.intersect(in_scattering_ray, volume_hit) && volume_hit.inside)
+        {
+            const float light_attenuation{volume::beer_lambert_transmittance(
+                volume_hit.max_root, sphere.density * (sphere.absorption_coeff + sphere.scattering_coeff))};
+            const glm::vec3 in_scattering_contribution{light_attenuation * light_color};
+            const float cos_theta{glm::dot(ray.direction, light_direction)};
+            final_color += (phase::henyey_greenstein(assymetry_factor, cos_theta) * transparency * step_size *
+                            sphere.scattering_coeff * sphere.density) *
+                           in_scattering_contribution;
+        }
+        else
+        {
+            throw std::runtime_error("In-scattering ray didn't intersect sphere");
+        }
+
+        if (transparency < 1e-3)
+        {
+            if (randomgen::random_float() > russian_roulette)
+            {
+                break;
+            }
+            else
+            {
+                transparency *= (1.0f / russian_roulette);
+            }
         }
     }
 

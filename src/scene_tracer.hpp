@@ -59,6 +59,18 @@ struct VolumeInScattering : public SceneTracer
     glm::vec3 light_color{1.3f, 0.3f, 0.9f};
 };
 
+// Chapter 3 - Ray Marching, now considering light in-Scattering, out-Scattering and absorption
+struct VolumeComplete : public SceneTracer
+{
+    ~VolumeComplete() override = default;
+    sf::Vector3f operator()(const geometry::Ray& ray, const primitives::Sphere& sphere) const override;
+
+    glm::vec3 light_direction{0.0f, 1.0f, 0.0f};
+    glm::vec3 light_color{15.0f, 0.0f, 15.0f};
+    float assymetry_factor{0.1f};
+    float russian_roulette{0.5f};
+};
+
 } // namespace scene
 
 #endif // SCENE_TRACER_HPP
