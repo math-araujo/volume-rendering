@@ -22,9 +22,9 @@
 
 sf::Color vector_to_color(sf::Vector3f vector)
 {
-    vector.x = std::min(vector.x, 1.0f);
-    vector.y = std::min(vector.y, 1.0f);
-    vector.z = std::min(vector.z, 1.0f);
+    vector.x = std::clamp(vector.x, 0.0f, 1.0f);
+    vector.y = std::clamp(vector.y, 0.0f, 1.0f);
+    vector.z = std::clamp(vector.z, 0.0f, 1.0f);
     return sf::Color{static_cast<std::uint8_t>(vector.x * 255.0f), static_cast<std::uint8_t>(vector.y * 255.0f),
                      static_cast<std::uint8_t>(vector.z * 255.0f)};
 }
@@ -107,8 +107,17 @@ int main()
     const sf::Vector2u image_size{640, 480};
     const sf::Vector3f background{0.0f, 1.0f, 1.0f};
     ImageData image_data{image_size};
-    sf::RenderWindow window{sf::VideoMode{image_size.x, image_size.y}, "Volume Renderer"};
 
+    bool update{false};
+    primitives::Sphere sphere{};
+    std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeDensityField>()};
+
+    sf::Clock render_clock;
+    std::cout << "Rendering image..." << std::endl;
+    image_data.render_image(glm::vec3{0.0f, 0.0f, 0.0f}, sphere, *tracer);
+    std::cout << "Done! Time elapsed: " << render_clock.restart().asSeconds() << " seconds\n";
+
+    sf::RenderWindow window{sf::VideoMode{image_size.x, image_size.y}, "Volume Renderer"};
     sf::Clock delta_clock;
     bool imgui_init = ImGui::SFML::Init(window);
     if (!imgui_init)
@@ -116,11 +125,6 @@ int main()
         std::cerr << "Failed to initialize ImGui::SFML" << std::endl;
         return 1;
     }
-
-    bool update{false};
-    primitives::Sphere sphere{};
-    std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeComplete>()};
-    image_data.render_image(glm::vec3{0.0f, 0.0f, 0.0f}, sphere, *tracer);
 
     while (window.isOpen())
     {

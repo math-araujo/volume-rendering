@@ -7,11 +7,17 @@ project(volume-rendering LANGUAGES CXX)
 find_package(glm CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(ImGui-SFML CONFIG REQUIRED)
+find_package(unofficial-noise CONFIG REQUIRED)
+find_package(unofficial-noiseutils CONFIG REQUIRED)
 find_package(SFML COMPONENTS system window graphics CONFIG REQUIRED)
 
 add_subdirectory(src)
 add_executable(main ${SOURCES})
-target_link_libraries(main PRIVATE glm::glm sfml-system sfml-graphics sfml-window imgui::imgui ImGui-SFML::ImGui-SFML)
+target_link_libraries(main PRIVATE
+    glm::glm unofficial::noise::noise-static unofficial::noiseutils::noiseutils-static
+    sfml-system sfml-graphics sfml-window
+    imgui::imgui ImGui-SFML::ImGui-SFML
+    )
 target_compile_features(main PRIVATE cxx_std_20)
 set_target_properties(main PROPERTIES CXX_EXTENSIONS OFF)
 

@@ -5,6 +5,7 @@
         "sfml",
         "imgui",
         "imgui-sfml",
-        "glm"
+        "glm",
+        "libnoise"
     ]
 }

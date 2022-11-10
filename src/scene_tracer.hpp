@@ -71,6 +71,19 @@ struct VolumeComplete : public SceneTracer
     float russian_roulette{0.5f};
 };
 
+// Chapter 4 - 3D Density Field using procedural noise to create heterogeneous volumes
+struct VolumeDensityField : public SceneTracer
+{
+    ~VolumeDensityField() override = default;
+    sf::Vector3f operator()(const geometry::Ray& ray, const primitives::Sphere& sphere) const override;
+
+    const sf::Vector3f background{0.572f, 0.772f, 0.921f};
+    glm::vec3 light_direction{-0.315798f, 0.719361f, 0.618702f};
+    glm::vec3 light_color{20.0f, 20.0f, 20.0f};
+    float assymetry_factor{0.0f};
+    float russian_roulette{0.5f};
+};
+
 } // namespace scene
 
 #endif // SCENE_TRACER_HPP
