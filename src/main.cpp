@@ -62,6 +62,26 @@ public:
         image_.saveToFile("volume.png");
     }
 
+    void render_image(const glm::vec3& ray_origin, const primitives::Box& box, const scene::SceneTracer& trace_scene)
+    {
+        for (std::uint32_t y = 0; y < image_size_.y; ++y)
+        {
+            for (std::uint32_t x = 0; x < image_size_.x; ++x)
+            {
+                glm::vec3 pixel_screen_coordinates{
+                    ((2.0f * ((x + 0.5f) / image_size_.x)) - 1.0f) * aspect_ratio_ * tan_fvov_,
+                    (-1 * ((2.0f * ((y + 0.5f) / image_size_.y)) - 1.0f)) * tan_fvov_, -1.0f};
+
+                geometry::Ray ray{.origin = ray_origin,
+                                  .direction = glm::normalize(pixel_screen_coordinates - ray_origin)};
+                image_.setPixel(x, y, vector_to_color(trace_scene(ray, box)));
+            }
+        }
+
+        load_image();
+        image_.saveToFile("grid_volume.png");
+    }
+
     void set_color(const sf::Color& color)
     {
         for (std::uint32_t y = 0; y < image_size_.y; ++y)
@@ -109,12 +129,15 @@ int main()
     ImageData image_data{image_size};
 
     bool update{false};
-    primitives::Sphere sphere{};
-    std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeDensityField>()};
+    // primitives::Sphere sphere{};
+    std::unique_ptr<primitives::Box> box = std::make_unique<primitives::Box>();
+    std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeVoxelGrid>()};
+    // std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeComplete>()};
 
     sf::Clock render_clock;
     std::cout << "Rendering image..." << std::endl;
-    image_data.render_image(glm::vec3{0.0f, 0.0f, 0.0f}, sphere, *tracer);
+    const glm::vec3 ray_origin{0.0f, 0.0f, 0.0f};
+    image_data.render_image(ray_origin, *box, *tracer);
     std::cout << "Done! Time elapsed: " << render_clock.restart().asSeconds() << " seconds\n";
 
     sf::RenderWindow window{sf::VideoMode{image_size.x, image_size.y}, "Volume Renderer"};
@@ -138,25 +161,25 @@ int main()
             }
         }
 
-        ImGui::SFML::Update(window, delta_clock.restart());
+        /*ImGui::SFML::Update(window, delta_clock.restart());
         ImGui::Begin("Settings");
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
                     ImGui::GetIO().Framerate);
         if (ImGui::TreeNode("Volume"))
         {
-            update = ImGui::SliderFloat("Absorption Coefficient", &sphere.absorption_coeff, 0.0f, 1.0f);
+            update = ImGui::SliderFloat("Absorption Coefficient", &sphere->absorption_coeff, 0.0f, 1.0f);
             if (update)
             {
-                image_data.render_image(glm::vec3{0.0f, 0.0f, 0.0f}, sphere, *tracer);
+                image_data.render_image(glm::vec3{0.0f, 0.0f, 0.0f}, *sphere, *tracer);
                 update = false;
             }
             ImGui::TreePop();
         }
-        ImGui::End();
+        ImGui::End();*/
 
         window.clear(sf::Color::Black);
         image_data.draw(window);
-        ImGui::SFML::Render(window);
+        // ImGui::SFML::Render(window);
         window.display();
     }
 

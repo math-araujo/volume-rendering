@@ -40,4 +40,48 @@ bool Sphere::intersect(const geometry::Ray& ray, HitRecord& record) const
     return true;
 }
 
+bool Box::intersect(const geometry::Ray& ray, HitRecord& record) const
+{
+    float root_x_min{(bounds[ray.sign[0]].x - ray.origin.x) * ray.inv_direction.x};
+    float root_x_max{(bounds[1 - ray.sign[0]].x - ray.origin.x) * ray.inv_direction.x};
+    float root_y_min{(bounds[ray.sign[1]].y - ray.origin.y) * ray.inv_direction.y};
+    float root_y_max{(bounds[1 - ray.sign[1]].y - ray.origin.y) * ray.inv_direction.y};
+
+    if (root_x_min > root_y_max || root_y_min > root_x_max)
+    {
+        return false;
+    }
+
+    if (root_y_min > root_x_min)
+    {
+        root_x_min = root_y_min;
+    }
+
+    if (root_y_max < root_x_max)
+    {
+        root_x_max = root_y_max;
+    }
+
+    float root_z_min{(bounds[ray.sign[2]].z - ray.origin.z) * ray.inv_direction.z};
+    float root_z_max{(bounds[1 - ray.sign[2]].z - ray.origin.z) * ray.inv_direction.z};
+
+    if (root_x_min > root_z_max || root_z_min > root_x_max)
+    {
+        return false;
+    }
+
+    /*if (root_z_min > root_x_min)
+    {
+        root_x_min = root_z_min;
+    }
+    if (root_z_max < root_x_max)
+    {
+        root_x_max = root_z_max;
+    }*/
+
+    record.min_root = std::max(root_z_min, root_x_min);
+    record.max_root = std::min(root_z_max, root_x_max);
+    return true;
+}
+
 } // namespace primitives

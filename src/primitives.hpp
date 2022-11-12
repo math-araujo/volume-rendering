@@ -1,6 +1,8 @@
 #ifndef PRIMITIVES_HPP
 #define PRIMITIVES_HPP
 
+#include <array>
+
 #include <SFML/System/Vector3.hpp>
 #include <glm/glm.hpp>
 
@@ -22,7 +24,13 @@ struct HitRecord
     bool inside{false};
 };
 
-struct Sphere
+struct Geometry
+{
+    virtual ~Geometry() = default;
+    virtual bool intersect(const geometry::Ray& ray, HitRecord& record) const = 0;
+};
+
+struct Sphere : public Geometry
 {
     float absorption_coeff{0.5f};
     float scattering_coeff{0.5f};
@@ -31,8 +39,19 @@ struct Sphere
     glm::vec3 center{0.0f, 0.0f, -20.0f};
     sf::Vector3f color{1.0f, 0.0f, 1.0f};
 
-    bool intersect(const geometry::Ray& ray, HitRecord& record) const;
+    bool intersect(const geometry::Ray& ray, HitRecord& record) const override;
 };
+
+struct Box : public Geometry
+{
+    bool intersect(const geometry::Ray& ray, HitRecord& record) const override;
+
+    std::array<glm::vec3, 2> bounds{glm::vec3{-0.25f, -0.25f, 3.0f - 0.25f}, glm::vec3{0.25f, 0.25f, 3.0f + 0.25f}};
+    float absorption_coeff{0.5f};
+    float scattering_coeff{0.5f};
+};
+
+using Grid = Box;
 
 } // namespace primitives
 

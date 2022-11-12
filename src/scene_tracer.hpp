@@ -15,6 +15,7 @@ class Ray;
 namespace primitives
 {
 
+class Box;
 class Sphere;
 
 } // namespace primitives
@@ -40,6 +41,10 @@ struct SceneTracer
 {
     virtual ~SceneTracer() = default;
     virtual sf::Vector3f operator()(const geometry::Ray& ray, const primitives::Sphere& sphere) const = 0;
+    virtual sf::Vector3f operator()(const geometry::Ray& /*ray*/, const primitives::Box& /*box*/) const
+    {
+        return sf::Vector3f{};
+    }
 };
 
 // Chapter 1 - Ray Casting with Beer-Lambert Law, implementing Indirect Light Absorption
@@ -76,6 +81,20 @@ struct VolumeDensityField : public SceneTracer
 {
     ~VolumeDensityField() override = default;
     sf::Vector3f operator()(const geometry::Ray& ray, const primitives::Sphere& sphere) const override;
+
+    const sf::Vector3f background{0.572f, 0.772f, 0.921f};
+    glm::vec3 light_direction{-0.315798f, 0.719361f, 0.618702f};
+    glm::vec3 light_color{20.0f, 20.0f, 20.0f};
+    float assymetry_factor{0.0f};
+    float russian_roulette{0.5f};
+};
+
+// Chapter 5 - 3D Voxel Grid as Density Field, using cached fluid simulation to create heterogeneous volumes
+struct VolumeVoxelGrid : public SceneTracer
+{
+    ~VolumeVoxelGrid() override = default;
+    sf::Vector3f operator()(const geometry::Ray& ray, const primitives::Sphere& sphere) const override;
+    sf::Vector3f operator()(const geometry::Ray& ray, const primitives::Box& box) const override;
 
     const sf::Vector3f background{0.572f, 0.772f, 0.921f};
     glm::vec3 light_direction{-0.315798f, 0.719361f, 0.618702f};
