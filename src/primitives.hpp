@@ -2,6 +2,7 @@
 #define PRIMITIVES_HPP
 
 #include <array>
+#include <vector>
 
 #include <SFML/System/Vector3.hpp>
 #include <glm/glm.hpp>
@@ -46,9 +47,11 @@ struct Box : public Geometry
 {
     bool intersect(const geometry::Ray& ray, HitRecord& record) const override;
 
-    std::array<glm::vec3, 2> bounds{glm::vec3{-0.25f, -0.25f, 3.0f - 0.25f}, glm::vec3{0.25f, 0.25f, 3.0f + 0.25f}};
+    std::array<glm::vec3, 2> bounds{glm::vec3{-50.0f, -50.0f, -50.0f}, glm::vec3{50.0f, 50.0f, 50.0f}};
     float absorption_coeff{0.5f};
     float scattering_coeff{0.5f};
+    int grid_resolution{128};
+    std::vector<float> density;
 };
 
 using Grid = Box;

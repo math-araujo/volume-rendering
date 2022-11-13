@@ -1,11 +1,14 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
 
 #include <glm/glm.hpp>
+#include <glm/gtx/string_cast.hpp>
+#include <glm/gtx/transform.hpp>
 #include <imgui-SFML.h>
 #include <imgui.h>
 
@@ -27,6 +30,22 @@ sf::Color vector_to_color(sf::Vector3f vector)
     vector.z = std::clamp(vector.z, 0.0f, 1.0f);
     return sf::Color{static_cast<std::uint8_t>(vector.x * 255.0f), static_cast<std::uint8_t>(vector.y * 255.0f),
                      static_cast<std::uint8_t>(vector.z * 255.0f)};
+}
+
+geometry::Ray transform_ray(const glm::mat4& matrix, glm::vec3 camera_origin, glm::vec3 pixel_position)
+{
+    /*glm::vec4 h_origin{camera_origin, 1.0f};
+    glm::vec4 h_pixel{pixel_position, 1.0f};
+    glm::vec3 origin_world = glm::vec3{matrix * h_origin};
+    glm::vec3 pixel_world = glm::vec3{matrix * h_pixel};
+    glm::vec3 ray_dir = pixel_world - origin_world;
+    return geometry::Ray{.origin = origin_world, .direction = glm::normalize(ray_dir)};*/
+    glm::vec4 h_origin{camera_origin, 1.0f};
+    glm::vec4 h_pixel{pixel_position, 1.0f};
+    glm::vec3 origin_world{matrix * glm::vec4{camera_origin, 1.0f}};
+    glm::vec3 pixel_world{matrix * glm::vec4{pixel_position, 1.0f}};
+    glm::vec3 ray_dir = pixel_world - origin_world;
+    return geometry::Ray{.origin = origin_world, .direction = glm::normalize(ray_dir)};
 }
 
 class ImageData
@@ -64,6 +83,10 @@ public:
 
     void render_image(const glm::vec3& ray_origin, const primitives::Box& box, const scene::SceneTracer& trace_scene)
     {
+        glm::mat4 camera_to_world{glm::translate(glm::mat4{1.0f}, glm::vec3{83.292171f, 25.137326f, 126.430772f})};
+        camera_to_world = glm::rotate(camera_to_world, glm::radians(30.0f), glm::vec3{0.0f, 1.0f, 0.0f});
+        camera_to_world = glm::rotate(camera_to_world, glm::radians(-15.0f), glm::vec3{1.0f, 0.0f, 0.0f});
+
         for (std::uint32_t y = 0; y < image_size_.y; ++y)
         {
             for (std::uint32_t x = 0; x < image_size_.x; ++x)
@@ -71,9 +94,7 @@ public:
                 glm::vec3 pixel_screen_coordinates{
                     ((2.0f * ((x + 0.5f) / image_size_.x)) - 1.0f) * aspect_ratio_ * tan_fvov_,
                     (-1 * ((2.0f * ((y + 0.5f) / image_size_.y)) - 1.0f)) * tan_fvov_, -1.0f};
-
-                geometry::Ray ray{.origin = ray_origin,
-                                  .direction = glm::normalize(pixel_screen_coordinates - ray_origin)};
+                auto ray = transform_ray(camera_to_world, ray_origin, pixel_screen_coordinates);
                 image_.setPixel(x, y, vector_to_color(trace_scene(ray, box)));
             }
         }
@@ -122,22 +143,31 @@ private:
     }
 };
 
+std::vector<float> read_density_from_file(std::string filename = "cachefiles/grid.40.bin")
+{
+    std::ifstream stream{filename, std::ios::binary};
+    std::vector<float> density_data(128 * 128 * 128);
+    stream.read((char*)(density_data.data()), sizeof(float) * 128 * 128 * 128);
+    return density_data;
+}
+
 int main()
 {
+    bool update{false};
+    // primitives::Sphere sphere{};
+    primitives::Box box{};
+    box.density = read_density_from_file();
+    std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeVoxelGrid>()};
+    // std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeComplete>()};
+
     const sf::Vector2u image_size{640, 480};
     const sf::Vector3f background{0.0f, 1.0f, 1.0f};
     ImageData image_data{image_size};
 
-    bool update{false};
-    // primitives::Sphere sphere{};
-    std::unique_ptr<primitives::Box> box = std::make_unique<primitives::Box>();
-    std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeVoxelGrid>()};
-    // std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeComplete>()};
-
     sf::Clock render_clock;
     std::cout << "Rendering image..." << std::endl;
     const glm::vec3 ray_origin{0.0f, 0.0f, 0.0f};
-    image_data.render_image(ray_origin, *box, *tracer);
+    image_data.render_image(ray_origin, box, *tracer);
     std::cout << "Done! Time elapsed: " << render_clock.restart().asSeconds() << " seconds\n";
 
     sf::RenderWindow window{sf::VideoMode{image_size.x, image_size.y}, "Volume Renderer"};
@@ -161,25 +191,26 @@ int main()
             }
         }
 
-        /*ImGui::SFML::Update(window, delta_clock.restart());
+        ImGui::SFML::Update(window, delta_clock.restart());
         ImGui::Begin("Settings");
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
                     ImGui::GetIO().Framerate);
         if (ImGui::TreeNode("Volume"))
         {
-            update = ImGui::SliderFloat("Absorption Coefficient", &sphere->absorption_coeff, 0.0f, 1.0f);
+            // update = ImGui::SliderFloat("Absorption Coefficient", &sphere.absorption_coeff, 0.0f, 1.0f);
+            update = ImGui::SliderFloat("Absorption Coefficient", &box.absorption_coeff, 0.0f, 1.0f);
             if (update)
             {
-                image_data.render_image(glm::vec3{0.0f, 0.0f, 0.0f}, *sphere, *tracer);
+                image_data.render_image(ray_origin, box, *tracer);
                 update = false;
             }
             ImGui::TreePop();
         }
-        ImGui::End();*/
+        ImGui::End();
 
         window.clear(sf::Color::Black);
         image_data.draw(window);
-        // ImGui::SFML::Render(window);
+        ImGui::SFML::Render(window);
         window.display();
     }
 
