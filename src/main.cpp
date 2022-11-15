@@ -33,10 +33,11 @@ int main()
 {
     bool update{false};
     primitives::Sphere sphere{};
-    /*primitives::Box box{};
-    box.density = read_density_from_file();*/
-    // std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeVoxelGrid>()};
-    std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeComplete>()};
+    primitives::Box box{};
+    box.density = read_density_from_file();
+    std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeVoxelGrid>()};
+    // std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeComplete>()};
+    // std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeDensityField>()};
 
     const sf::Vector2u image_size{640, 480};
     const sf::Vector3f background{0.0f, 1.0f, 1.0f};
@@ -45,8 +46,8 @@ int main()
     sf::Clock render_clock;
     std::cout << "Rendering image..." << std::endl;
     const glm::vec3 ray_origin{0.0f, 0.0f, 0.0f};
-    render_context.render_image(ray_origin, sphere, *tracer);
-    // render_context.render_image(ray_origin, box, *tracer);
+    // render_context.render_image(ray_origin, sphere, *tracer);
+    render_context.render_image(ray_origin, box, *tracer);
     std::cout << "Done! Time elapsed: " << render_clock.restart().asSeconds() << " seconds\n";
 
     sf::RenderWindow window{sf::VideoMode{image_size.x, image_size.y}, "Volume Renderer"};
@@ -80,7 +81,7 @@ int main()
             // update = ImGui::SliderFloat("Absorption Coefficient", &box.absorption_coeff, 0.0f, 1.0f);
             if (update)
             {
-                render_context.render_image(ray_origin, sphere, *tracer);
+                // render_context.render_image(ray_origin, sphere, *tracer);
                 // render_context.render_image(ray_origin, box, *tracer);
                 update = false;
             }
