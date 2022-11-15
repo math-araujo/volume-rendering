@@ -7,6 +7,8 @@ set(FILENAMES
     phase.hpp phase.cpp
     random_gen.hpp random_gen.cpp
     density.hpp density.cpp
+    context.hpp context.cpp
+    util.hpp util.cpp
 )
 
 set(DIR_FILENAMES "")

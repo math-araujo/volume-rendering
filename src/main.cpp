@@ -12,136 +12,14 @@
 #include <imgui-SFML.h>
 #include <imgui.h>
 
-#include <SFML/Graphics/Image.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
-#include <SFML/Graphics/Sprite.hpp>
-#include <SFML/Graphics/Texture.hpp>
 #include <SFML/System/Clock.hpp>
 #include <SFML/Window/Event.hpp>
 
+#include "context.hpp"
 #include "primitives.hpp"
 #include "ray.hpp"
 #include "scene_tracer.hpp"
-
-sf::Color vector_to_color(sf::Vector3f vector)
-{
-    vector.x = std::clamp(vector.x, 0.0f, 1.0f);
-    vector.y = std::clamp(vector.y, 0.0f, 1.0f);
-    vector.z = std::clamp(vector.z, 0.0f, 1.0f);
-    return sf::Color{static_cast<std::uint8_t>(vector.x * 255.0f), static_cast<std::uint8_t>(vector.y * 255.0f),
-                     static_cast<std::uint8_t>(vector.z * 255.0f)};
-}
-
-geometry::Ray transform_ray(const glm::mat4& matrix, glm::vec3 camera_origin, glm::vec3 pixel_position)
-{
-    /*glm::vec4 h_origin{camera_origin, 1.0f};
-    glm::vec4 h_pixel{pixel_position, 1.0f};
-    glm::vec3 origin_world = glm::vec3{matrix * h_origin};
-    glm::vec3 pixel_world = glm::vec3{matrix * h_pixel};
-    glm::vec3 ray_dir = pixel_world - origin_world;
-    return geometry::Ray{.origin = origin_world, .direction = glm::normalize(ray_dir)};*/
-    glm::vec4 h_origin{camera_origin, 1.0f};
-    glm::vec4 h_pixel{pixel_position, 1.0f};
-    glm::vec3 origin_world{matrix * glm::vec4{camera_origin, 1.0f}};
-    glm::vec3 pixel_world{matrix * glm::vec4{pixel_position, 1.0f}};
-    glm::vec3 ray_dir = pixel_world - origin_world;
-    return geometry::Ray{.origin = origin_world, .direction = glm::normalize(ray_dir)};
-}
-
-class ImageData
-{
-public:
-    ImageData(const sf::Vector2u& dimensions, float vertical_fov = 45.0f) :
-        image_size_{dimensions}, aspect_ratio_{static_cast<float>(image_size_.x) / static_cast<float>(image_size_.y)},
-        vertical_fov_{vertical_fov}, tan_fvov_{std::tan(glm::radians(vertical_fov_ / 2.0f))}
-    {
-        image_.create(image_size_.x, image_size_.y, sf::Color::Black);
-        load_image();
-        sprite_.setTexture(texture_, true);
-    }
-
-    void render_image(const glm::vec3& ray_origin, const primitives::Sphere& sphere,
-                      const scene::SceneTracer& trace_scene)
-    {
-        for (std::uint32_t y = 0; y < image_size_.y; ++y)
-        {
-            for (std::uint32_t x = 0; x < image_size_.x; ++x)
-            {
-                glm::vec3 pixel_screen_coordinates{
-                    ((2.0f * ((x + 0.5f) / image_size_.x)) - 1.0f) * aspect_ratio_ * tan_fvov_,
-                    (-1 * ((2.0f * ((y + 0.5f) / image_size_.y)) - 1.0f)) * tan_fvov_, -1.0f};
-
-                geometry::Ray ray{.origin = ray_origin,
-                                  .direction = glm::normalize(pixel_screen_coordinates - ray_origin)};
-                image_.setPixel(x, y, vector_to_color(trace_scene(ray, sphere)));
-            }
-        }
-
-        load_image();
-        image_.saveToFile("volume.png");
-    }
-
-    void render_image(const glm::vec3& ray_origin, const primitives::Box& box, const scene::SceneTracer& trace_scene)
-    {
-        glm::mat4 camera_to_world{glm::translate(glm::mat4{1.0f}, glm::vec3{83.292171f, 25.137326f, 126.430772f})};
-        camera_to_world = glm::rotate(camera_to_world, glm::radians(30.0f), glm::vec3{0.0f, 1.0f, 0.0f});
-        camera_to_world = glm::rotate(camera_to_world, glm::radians(-15.0f), glm::vec3{1.0f, 0.0f, 0.0f});
-
-        for (std::uint32_t y = 0; y < image_size_.y; ++y)
-        {
-            for (std::uint32_t x = 0; x < image_size_.x; ++x)
-            {
-                glm::vec3 pixel_screen_coordinates{
-                    ((2.0f * ((x + 0.5f) / image_size_.x)) - 1.0f) * aspect_ratio_ * tan_fvov_,
-                    (-1 * ((2.0f * ((y + 0.5f) / image_size_.y)) - 1.0f)) * tan_fvov_, -1.0f};
-                auto ray = transform_ray(camera_to_world, ray_origin, pixel_screen_coordinates);
-                image_.setPixel(x, y, vector_to_color(trace_scene(ray, box)));
-            }
-        }
-
-        load_image();
-        image_.saveToFile("grid_volume.png");
-    }
-
-    void set_color(const sf::Color& color)
-    {
-        for (std::uint32_t y = 0; y < image_size_.y; ++y)
-        {
-            for (std::uint32_t x = 0; x < image_size_.x; ++x)
-            {
-                image_.setPixel(x, y, color);
-            }
-        }
-        load_image();
-    }
-
-    void set_color(const sf::Vector3f& color)
-    {
-        set_color(vector_to_color(color));
-    }
-
-    void draw(sf::RenderWindow& window)
-    {
-        window.draw(sprite_);
-    }
-
-private:
-    const sf::Vector2u image_size_;
-    const float aspect_ratio_;
-    const float vertical_fov_;
-    const float tan_fvov_;
-    sf::Image image_{};
-    sf::Texture texture_{};
-    sf::Sprite sprite_{};
-
-    void load_image()
-    {
-        if (!texture_.loadFromImage(image_))
-        {
-            throw std::runtime_error{"Failed to load image to texture"};
-        }
-    }
-};
 
 std::vector<float> read_density_from_file(std::string filename = "cachefiles/grid.40.bin")
 {
@@ -154,20 +32,21 @@ std::vector<float> read_density_from_file(std::string filename = "cachefiles/gri
 int main()
 {
     bool update{false};
-    // primitives::Sphere sphere{};
-    primitives::Box box{};
-    box.density = read_density_from_file();
-    std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeVoxelGrid>()};
-    // std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeComplete>()};
+    primitives::Sphere sphere{};
+    /*primitives::Box box{};
+    box.density = read_density_from_file();*/
+    // std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeVoxelGrid>()};
+    std::unique_ptr<scene::SceneTracer> tracer{std::make_unique<scene::VolumeComplete>()};
 
     const sf::Vector2u image_size{640, 480};
     const sf::Vector3f background{0.0f, 1.0f, 1.0f};
-    ImageData image_data{image_size};
+    render::Context render_context{image_size};
 
     sf::Clock render_clock;
     std::cout << "Rendering image..." << std::endl;
     const glm::vec3 ray_origin{0.0f, 0.0f, 0.0f};
-    image_data.render_image(ray_origin, box, *tracer);
+    render_context.render_image(ray_origin, sphere, *tracer);
+    // render_context.render_image(ray_origin, box, *tracer);
     std::cout << "Done! Time elapsed: " << render_clock.restart().asSeconds() << " seconds\n";
 
     sf::RenderWindow window{sf::VideoMode{image_size.x, image_size.y}, "Volume Renderer"};
@@ -197,11 +76,12 @@ int main()
                     ImGui::GetIO().Framerate);
         if (ImGui::TreeNode("Volume"))
         {
-            // update = ImGui::SliderFloat("Absorption Coefficient", &sphere.absorption_coeff, 0.0f, 1.0f);
-            update = ImGui::SliderFloat("Absorption Coefficient", &box.absorption_coeff, 0.0f, 1.0f);
+            update = ImGui::SliderFloat("Absorption Coefficient", &sphere.absorption_coeff, 0.0f, 1.0f);
+            // update = ImGui::SliderFloat("Absorption Coefficient", &box.absorption_coeff, 0.0f, 1.0f);
             if (update)
             {
-                image_data.render_image(ray_origin, box, *tracer);
+                render_context.render_image(ray_origin, sphere, *tracer);
+                // render_context.render_image(ray_origin, box, *tracer);
                 update = false;
             }
             ImGui::TreePop();
@@ -209,7 +89,7 @@ int main()
         ImGui::End();
 
         window.clear(sf::Color::Black);
-        image_data.draw(window);
+        render_context.draw(window);
         ImGui::SFML::Render(window);
         window.display();
     }
