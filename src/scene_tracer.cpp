@@ -244,7 +244,8 @@ sf::Vector3f VolumeVoxelGrid::operator()(const geometry::Ray& ray, const primiti
         const float attenuation{volume::beer_lambert_transmittance(step_size, density * extinction_coeff)};
         transparency *= attenuation;
 
-        const geometry::Ray in_scattering_ray{.origin = sample_position, .direction = light_direction};
+        geometry::Ray in_scattering_ray{.origin = sample_position, .direction = light_direction};
+        in_scattering_ray.compute_inv_direction();
         primitives::HitRecord volume_hit;
 
         // Compute density along in-scattering light ray passing through heterogeneous volume using ray marching

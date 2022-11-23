@@ -23,7 +23,7 @@ void Context::render_image(const glm::vec3& ray_origin, const primitives::Sphere
                            const scene::SceneTracer& trace_scene)
 {
     const std::uint32_t dimensions{image_size_.x * image_size_.y};
-#pragma omp parallel for schedule(dynamic, 16 * 16)
+#pragma omp parallel for schedule(dynamic)
     for (std::uint32_t index = 0; index < dimensions; ++index)
     {
         const std::uint32_t y{index / image_size_.x};
@@ -55,6 +55,7 @@ void Context::render_image(const glm::vec3& ray_origin, const primitives::Box& b
         glm::vec3 pixel_screen_coordinates{((2.0f * ((x + 0.5f) / image_size_.x)) - 1.0f) * aspect_ratio_ * tan_fvov_,
                                            (-1 * ((2.0f * ((y + 0.5f) / image_size_.y)) - 1.0f)) * tan_fvov_, -1.0f};
         auto ray = util::transform_ray(camera_to_world, ray_origin, pixel_screen_coordinates);
+        ray.compute_inv_direction();
         image_.setPixel(x, y, util::vector_to_color(trace_scene(ray, box)));
     }
 
