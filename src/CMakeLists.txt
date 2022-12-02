@@ -1,5 +1,5 @@
 set(FILENAMES 
-    main.cpp
+    #main.cpp
     scene_tracer.hpp scene_tracer.cpp
     primitives.hpp primitives.cpp
     ray.hpp ray.cpp
@@ -11,8 +11,10 @@ set(FILENAMES
     util.hpp util.cpp
 )
 
-set(DIR_FILENAMES "")
-foreach(FILENAME ${FILENAMES})
-    list(APPEND DIR_FILENAMES ${CMAKE_CURRENT_SOURCE_DIR}/${FILENAME})
-endforeach()
-set(SOURCES ${DIR_FILENAMES} PARENT_SCOPE)
+add_library(volrender STATIC ${FILENAMES})
+target_link_libraries(volrender PUBLIC 
+    glm::glm unofficial::noise::noise-static unofficial::noiseutils::noiseutils-static
+    sfml-system sfml-graphics sfml-window
+    imgui::imgui ImGui-SFML::ImGui-SFML
+)
+target_compile_features(volrender PRIVATE cxx_std_20)

@@ -13,23 +13,24 @@ find_package(unofficial-noise CONFIG REQUIRED)
 find_package(unofficial-noiseutils CONFIG REQUIRED)
 
 add_subdirectory(src)
-add_executable(main ${SOURCES})
-target_link_libraries(main PRIVATE
-    glm::glm unofficial::noise::noise-static unofficial::noiseutils::noiseutils-static
-    sfml-system sfml-graphics sfml-window
-    imgui::imgui ImGui-SFML::ImGui-SFML
-    )
-if (OpenMP_CXX_FOUND)
-    target_link_libraries(main PRIVATE OpenMP::OpenMP_CXX)
-else()
-    message(WARNING "OpenMP not found")
-endif()
+function(set_executable executable main_file)
+    add_executable(${executable} ${main_file} ${sources})
+    target_link_libraries(${executable} PRIVATE volrender)
+    if (OpenMP_CXX_FOUND)
+        target_link_libraries(${executable} PRIVATE OpenMP::OpenMP_CXX)
+    else()
+        message(WARNING "OpenMP not found")
+    endif()
 
-target_compile_features(main PRIVATE cxx_std_20)
-set_target_properties(main PROPERTIES CXX_EXTENSIONS OFF)
+    target_compile_features(${executable} PRIVATE cxx_std_20)
+    set_target_properties(${executable} PROPERTIES CXX_EXTENSIONS OFF)
 
-if (MSVC)
-    target_compile_options(main PRIVATE /W3)
-else()
-    target_compile_options(main PRIVATE -Wall -Wextra -Wpedantic)
-endif()
+    if (MSVC)
+        target_compile_options(${executable} PRIVATE /W3)
+    else()
+        target_compile_options(${executable} PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+endfunction()
+
+set_executable("main" "src/main.cpp")
+set_executable("fluid" "src/fluid.cpp")
